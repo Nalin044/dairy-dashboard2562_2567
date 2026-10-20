@@ -1,0 +1,310 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Interactive Dashboard: ข้อมูลปริมาณน้ำนม ปี 2562-2567</title>
+    <!-- Tailwind CSS สำหรับจัด Layout และ UI -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Chart.js สำหรับวาดกราฟ -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- FontAwesome สำหรับ Icon -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+        }
+    </script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;500;600;700&display=swap');
+        body { font-family: 'Prompt', sans-serif; }
+    </style>
+</head>
+<body class="bg-slate-50 text-slate-800 dark:bg-slate-900 dark:text-slate-100 transition-colors duration-300">
+    
+    <!-- Navbar / Header -->
+    <nav class="bg-blue-800 dark:bg-blue-950 text-white shadow-lg p-4">
+        <div class="container mx-auto flex justify-between items-center">
+            <h1 class="text-2xl font-bold"><i class="fa-solid fa-cow mr-2"></i> Dashboard ปริมาณน้ำนมดิบไทย (ปี 2562-2567)</h1>
+            <div class="flex items-center space-x-4">
+                <select id="regionFilter" class="bg-blue-700 text-white border border-blue-600 rounded p-2 outline-none cursor-pointer" onchange="updateDashboard()">
+                    <option value="all">รวมทั้งประเทศ</option>
+                    <option value="north">ภาคเหนือ</option>
+                    <option value="northeast">ภาคตะวันออกเฉียงเหนือ</option>
+                    <option value="central">ภาคกลาง</option>
+                    <option value="south">ภาคใต้</option>
+                </select>
+                <button onclick="toggleDarkMode()" class="bg-blue-700 hover:bg-blue-600 p-2 rounded-full w-10 h-10 flex justify-center items-center">
+                    <i id="themeIcon" class="fa-solid fa-moon"></i>
+                </button>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container mx-auto p-4 space-y-6 mt-4">
+        
+        <!-- KPI Cards -->
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            <div class="bg-white dark:bg-slate-800 rounded-xl shadow p-5 border-l-4 border-blue-500 hover:shadow-lg transition">
+                <div class="flex justify-between items-start">
+                    <div>
+                        <p class="text-sm text-gray-500 dark:text-gray-400">เกษตรกร (ราย) ปี 67</p>
+                        <h3 class="text-3xl font-bold mt-1" id="kpi-farmer">15,769</h3>
+                    </div>
+                    <div class="bg-blue-100 text-blue-600 p-3 rounded-lg"><i class="fa-solid fa-users"></i></div>
+                </div>
+                <p class="text-sm text-red-500 mt-2 font-medium" id="kpi-farmer-trend"><i class="fa-solid fa-arrow-trend-down"></i> -29.9% จากปี 66</p>
+            </div>
+            
+            <div class="bg-white dark:bg-slate-800 rounded-xl shadow p-5 border-l-4 border-green-500 hover:shadow-lg transition">
+                <div class="flex justify-between items-start">
+                    <div>
+                        <p class="text-sm text-gray-500 dark:text-gray-400">แม่โครีดนมเฉลี่ย (ตัว)</p>
+                        <h3 class="text-3xl font-bold mt-1" id="kpi-cow">242,912</h3>
+                    </div>
+                    <div class="bg-green-100 text-green-600 p-3 rounded-lg"><i class="fa-solid fa-hippo"></i></div>
+                </div>
+                <p class="text-sm text-red-500 mt-2 font-medium" id="kpi-cow-trend"><i class="fa-solid fa-arrow-trend-down"></i> -5.0% จากปี 66</p>
+            </div>
+
+            <div class="bg-white dark:bg-slate-800 rounded-xl shadow p-5 border-l-4 border-purple-500 hover:shadow-lg transition">
+                <div class="flex justify-between items-start">
+                    <div>
+                        <p class="text-sm text-gray-500 dark:text-gray-400">ปริมาณน้ำนมดิบ (ตัน)</p>
+                        <h3 class="text-3xl font-bold mt-1" id="kpi-milk">1,032,421</h3>
+                    </div>
+                    <div class="bg-purple-100 text-purple-600 p-3 rounded-lg"><i class="fa-solid fa-glass-water"></i></div>
+                </div>
+                <p class="text-sm text-red-500 mt-2 font-medium" id="kpi-milk-trend"><i class="fa-solid fa-arrow-trend-down"></i> -0.9% จากปี 66</p>
+            </div>
+
+            <div class="bg-white dark:bg-slate-800 rounded-xl shadow p-5 border-l-4 border-amber-500 hover:shadow-lg transition">
+                <div class="flex justify-between items-start">
+                    <div>
+                        <p class="text-sm text-gray-500 dark:text-gray-400">อัตราให้นม (กก./ตัว/วัน)</p>
+                        <h3 class="text-3xl font-bold mt-1" id="kpi-rate">11.61</h3>
+                    </div>
+                    <div class="bg-amber-100 text-amber-600 p-3 rounded-lg"><i class="fa-solid fa-chart-line"></i></div>
+                </div>
+                <p class="text-sm text-green-500 mt-2 font-medium" id="kpi-rate-trend"><i class="fa-solid fa-arrow-trend-up"></i> +4.0% จากปี 66</p>
+            </div>
+        </div>
+
+        <!-- Charts Section -->
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <!-- Trend Chart -->
+            <div class="bg-white dark:bg-slate-800 p-5 rounded-xl shadow">
+                <h2 class="text-lg font-bold mb-4">แนวโน้มปริมาณน้ำนมดิบ & แม่โครีดนม (ปี 62-67)</h2>
+                <canvas id="trendChart" height="250"></canvas>
+            </div>
+            
+            <!-- Milk Rate Comparison -->
+            <div class="bg-white dark:bg-slate-800 p-5 rounded-xl shadow">
+                <h2 class="text-lg font-bold mb-4">อัตราการให้นม (กก./ตัว/วัน) เทียบตามปี</h2>
+                <canvas id="barChart" height="250"></canvas>
+            </div>
+        </div>
+
+        <!-- Data Table -->
+        <div class="bg-white dark:bg-slate-800 p-5 rounded-xl shadow overflow-hidden">
+            <div class="flex justify-between items-center mb-4">
+                <h2 class="text-lg font-bold">ตารางข้อมูลรายละเอียดเชิงลึก (Data Table)</h2>
+                <div class="flex space-x-2">
+                    <input type="text" id="searchInput" placeholder="ค้นหาภูมิภาค..." class="border rounded px-3 py-1 text-sm dark:bg-slate-700 dark:border-slate-600 dark:text-white" onkeyup="filterTable()">
+                    <button class="bg-green-600 hover:bg-green-500 text-white px-3 py-1 rounded text-sm"><i class="fa-solid fa-file-excel mr-1"></i> Export</button>
+                </div>
+            </div>
+            <div class="overflow-x-auto">
+                <table class="w-full text-left border-collapse" id="dataTable">
+                    <thead>
+                        <tr class="bg-gray-100 dark:bg-slate-700">
+                            <th class="p-3 border-b dark:border-slate-600 cursor-pointer">ภูมิภาค <i class="fa-solid fa-sort ml-1 text-gray-400"></i></th>
+                            <th class="p-3 border-b dark:border-slate-600">เกษตรกร (ราย) ปี 67</th>
+                            <th class="p-3 border-b dark:border-slate-600">แม่โครีดนม (ตัว) ปี 67</th>
+                            <th class="p-3 border-b dark:border-slate-600">ปริมาณน้ำนม (ตัน) ปี 67</th>
+                            <th class="p-3 border-b dark:border-slate-600">อัตราให้นม (กก./ตัว/วัน)</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tableBody">
+                        <!-- Gen via JS -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+    </div>
+
+    <script>
+        // --- Data Setup ---
+        const rawData = {
+            'all': {
+                farmers: [18850, 20174, 24145, 24117, 22507, 15769],
+                cows: [303453, 307340, 306845, 287734, 255725, 242912],
+                milk: [1291706, 1294344, 1268149, 1185317, 1041678, 1032421],
+                rate: [11.66, 11.51, 11.32, 11.29, 11.16, 11.61]
+            },
+            'north': {
+                farmers: [1978, 2040, 2118, 2183, 1619, 1436],
+                cows: [34549, 35501, 36255, 34026, 32135, 31550],
+                milk: [155113, 159767, 156545, 141414, 135802, 134051],
+                rate: [12.3, 12.33, 11.83, 11.39, 11.58, 11.61]
+            },
+            'northeast': {
+                farmers: [6041, 6705, 7739, 7909, 7355, 4527],
+                cows: [78151, 81064, 80471, 77524, 65977, 61663],
+                milk: [369784, 375046, 369768, 347331, 286860, 284869],
+                rate: [12.96, 12.65, 12.59, 12.28, 11.91, 12.62]
+            },
+            'central': {
+                farmers: [10627, 11214, 14055, 13803, 13335, 9659],
+                cows: [188982, 189094, 187822, 173831, 155394, 147779],
+                milk: [760713, 753558, 732961, 687094, 610559, 605534],
+                rate: [11.03, 10.88, 10.69, 10.83, 10.77, 11.20]
+            },
+            'south': {
+                farmers: [204, 215, 233, 222, 198, 147],
+                cows: [1771, 1681, 2297, 2353, 2219, 1920],
+                milk: [6096, 5973, 8875, 9478, 8457, 7967],
+                rate: [9.43, 9.73, 10.59, 11.03, 10.44, 11.34]
+            }
+        };
+        const years = ['2562', '2563', '2564', '2565', '2566', '2567'];
+
+        // --- Init Charts ---
+        let trendChart, barChart;
+
+        function renderCharts(region) {
+            const data = rawData[region];
+            
+            // Destroy existing charts to update
+            if(trendChart) trendChart.destroy();
+            if(barChart) barChart.destroy();
+
+            // Trend Chart
+            const ctx1 = document.getElementById('trendChart').getContext('2d');
+            trendChart = new Chart(ctx1, {
+                type: 'line',
+                data: {
+                    labels: years,
+                    datasets: [
+                        {
+                            label: 'ปริมาณน้ำนมดิบ (ตัน)',
+                            data: data.milk,
+                            borderColor: '#8b5cf6',
+                            backgroundColor: 'rgba(139, 92, 246, 0.1)',
+                            yAxisID: 'y',
+                            fill: true,
+                            tension: 0.4
+                        },
+                        {
+                            label: 'แม่โครีดนม (ตัว)',
+                            data: data.cows,
+                            borderColor: '#22c55e',
+                            backgroundColor: 'transparent',
+                            yAxisID: 'y1',
+                            type: 'line',
+                            borderDash: [5, 5],
+                            tension: 0.4
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    interaction: { mode: 'index', intersect: false },
+                    scales: {
+                        y: { type: 'linear', display: true, position: 'left' },
+                        y1: { type: 'linear', display: true, position: 'right', grid: { drawOnChartArea: false } }
+                    }
+                }
+            });
+
+            // Bar Chart
+            const ctx2 = document.getElementById('barChart').getContext('2d');
+            barChart = new Chart(ctx2, {
+                type: 'bar',
+                data: {
+                    labels: years,
+                    datasets: [{
+                        label: 'อัตราให้นม (กก./ตัว/วัน)',
+                        data: data.rate,
+                        backgroundColor: '#f59e0b',
+                        borderRadius: 4
+                    }]
+                },
+                options: { responsive: true }
+            });
+        }
+
+        // --- Update KPI and Table ---
+        function updateDashboard() {
+            const region = document.getElementById('regionFilter').value;
+            const data = rawData[region];
+            
+            // Update KPIs with format
+            document.getElementById('kpi-farmer').innerText = data.farmers[5].toLocaleString();
+            document.getElementById('kpi-cow').innerText = data.cows[5].toLocaleString();
+            document.getElementById('kpi-milk').innerText = data.milk[5].toLocaleString();
+            document.getElementById('kpi-rate').innerText = data.rate[5].toFixed(2);
+            
+            renderCharts(region);
+        }
+
+        // --- Populate Table ---
+        function populateTable() {
+            const tbody = document.getElementById('tableBody');
+            const regions = [
+                { id: 'north', name: 'ภาคเหนือ' },
+                { id: 'northeast', name: 'ภาคตะวันออกเฉียงเหนือ' },
+                { id: 'central', name: 'ภาคกลาง' },
+                { id: 'south', name: 'ภาคใต้' }
+            ];
+            
+            let html = '';
+            regions.forEach(r => {
+                let d = rawData[r.id];
+                html += `
+                    <tr class="border-b dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800 transition">
+                        <td class="p-3 font-medium">${r.name}</td>
+                        <td class="p-3">${d.farmers[5].toLocaleString()}</td>
+                        <td class="p-3">${d.cows[5].toLocaleString()}</td>
+                        <td class="p-3">${d.milk[5].toLocaleString()}</td>
+                        <td class="p-3 text-amber-600 font-bold">${d.rate[5].toFixed(2)}</td>
+                    </tr>
+                `;
+            });
+            tbody.innerHTML = html;
+        }
+
+        function filterTable() {
+            const input = document.getElementById("searchInput");
+            const filter = input.value.toUpperCase();
+            const table = document.getElementById("dataTable");
+            const tr = table.getElementsByTagName("tr");
+            for (let i = 1; i < tr.length; i++) {
+                let td = tr[i].getElementsByTagName("td")[0];
+                if (td) {
+                    let txtValue = td.textContent || td.innerText;
+                    tr[i].style.display = txtValue.toUpperCase().indexOf(filter) > -1 ? "" : "none";
+                }       
+            }
+        }
+
+        // --- Dark Mode ---
+        function toggleDarkMode() {
+            document.documentElement.classList.toggle('dark');
+            const icon = document.getElementById('themeIcon');
+            if(document.documentElement.classList.contains('dark')) {
+                icon.classList.remove('fa-moon');
+                icon.classList.add('fa-sun');
+            } else {
+                icon.classList.remove('fa-sun');
+                icon.classList.add('fa-moon');
+            }
+        }
+
+        // Init
+        updateDashboard();
+        populateTable();
+    </script>
+</body>
+</html>
